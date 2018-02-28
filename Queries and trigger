@@ -1,0 +1,54 @@
+
+
+TRIGGER FUNCTIONS USED
+
+
+delimiter |
+create TRIGGER `purchase_log`
+after INSERT
+ON Purchase FOR EACH ROW
+BEGIN
+INSERT INTO log_pur_details(Pid,Contact_no,ISBN,quantity,FLAG,Sid)
+VALUES(NEW.Pid,NEW.Contact_no,NEW.ISBN,NEW.quantity,"Purchased",NEW.Sid);
+end|
+
+delimiter |
+create TRIGGER `cancellation_log`
+after DELETE
+ON Purchase FOR EACH ROW
+BEGIN
+INSERT INTO log_pur_details(Pid,Contact_no,ISBN,quantity,FLAG,Sid)
+VALUES(OLD.Pid,OLD.Contact_no,OLD.ISBN,OLD.quantity,"Cancelled",OLD.Sid);
+end|
+
+delimiter |
+create TRIGGER `Inventory_revoke`
+after DELETE
+ON Purchase FOR EACH ROW
+BEGIN
+UPDATE Inventory SET quantity = quantity + OLD.quantity where Sid = OLD.sid and ISBN = OLD.ISBN;
+end|
+
+delimiter |
+create TRIGGER `Quantity_revoke_on_purchase`
+after INSERT
+ON Purchase FOR EACH ROW
+BEGIN
+UPDATE Inventory SET quantity = quantity - NEW.quantity where Sid = NEW.sid and ISBN = NEW.ISBN;
+end|
+
+
+Here change the author/title name to the corresponding variable
+
+Select ISBN,Title,Author,Publisher,YrPub,SID,Price,Quantity from BookInfo,Inventory Where BookInfo.ISBN = Inventory.ISBN and Author = "C.S. Lewis" ORDER BY PRICE;
+Select BookInfo.ISBN,Title,Publisher,YrPub,SID,Price,Quantity from BookInfo,Inventory Where BookInfo.ISBN = Inventory.ISBN and Title = "out of the silent planet" ORDER BY PRICE;
+
+Show an author's book which has high ratings as well as the sales of that book in our portal is also good;
+
+SELECT Author,Title FROM BookInfo WHERE ratings > (SELECT AVG(ratings) from BookInfo) and ISBN IN (SELECT ISBN FROM log_pur_details WHERE FLAG = "Purchased" GROUP BY ISBN HAVING COUNT(*) >(SELECT AVG(sales_count_all_books) FROM (SELECT COUNT(*) as sales_count_all_books FROM log_pur_details WHERE FLAG = "Purchased" GROUP BY ISBN) as t));
+
+select Author from Autdet where Gender="Female"and age BETWEEN 20 and 50 and  Author IN (SELECT Author FROM BookInfo WHERE ratings > (SELECT AVG(ratings) from BookInfo) and ISBN IN (SELECT ISBN FROM log_pur_details WHERE FLAG = "Purchased" GROUP BY ISBN HAVING COUNT(*) > (SELECT AVG(sales_count_all_books) FROM (SELECT COUNT(*) as sales_count_all_books FROM log_pur_details WHERE FLAG = "Purchased" GROUP BY ISBN) as t)));
+
+Highest rated woman/man Author
+
+select Author,Gender FROM Autdet where Gender = "female" and Author IN (SELECT BookInfo.Author FROM BookInfo,Autdet WHERE BookInfo.Author = Autdet.Author and ratings IN (SELECT ratings FROM BookInfo WHERE and ratings > 6 Author IN (SELECT Author FROM Autdet)));
